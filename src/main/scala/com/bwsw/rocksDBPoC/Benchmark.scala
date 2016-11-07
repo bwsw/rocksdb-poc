@@ -5,6 +5,12 @@ import com.bwsw.rocksDBPoC.util.{delete, time}
 
 object Benchmark extends App {
 
+  if (args.length < 3) {
+    println("Usage: \"sbt\" \"run <DBPath> <N> <M>\"")
+    println("Where DBPath is a path to test db (will create if missing). N is a number of initial dummy records to put in DB. M of them will be created with same int pair prefix")
+    System.exit(1)
+  }
+
   val (dbPath, n, m) = (args(0), args(1).toInt, args(2).toInt)
   val db = GateWay[String](dbPath)
   val prefix = (1, 1)
