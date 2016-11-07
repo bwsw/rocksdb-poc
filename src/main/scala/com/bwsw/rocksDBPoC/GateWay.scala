@@ -37,7 +37,7 @@ class GateWay[T <: java.io.Serializable](path: String) {
     ois.close()
     result.asInstanceOf[T]
   }
-//
+
   private def normalize(bytes: Array[Byte]): Array[Byte] = bytes match {
     case Array(a) => Array[Byte](0, 0, 0, a)
     case Array(a, b) => Array[Byte](0, 0, a, b)
@@ -112,11 +112,14 @@ class GateWay[T <: java.io.Serializable](path: String) {
 
 }
 
-/**
-  * Loading of C++ library after first GateWay object instantiation.
-  * In RockDB's sample they use Java's static constructor for this
-  * see https://github.com/facebook/rocksdb/blob/master/java/samples/src/main/java/RocksDBSample.java#L19
-  */
 object GateWay {
+  /**
+    * Loading of C++ library after first GateWay object instantiation.
+    * In RockDB's sample they use Java's static constructor for this
+    * see https://github.com/facebook/rocksdb/blob/master/java/samples/src/main/java/RocksDBSample.java#L19
+    */
   RocksDB.loadLibrary()
+
+  def apply[T <: java.io.Serializable](path: String): GateWay[T] = new GateWay[T](path)
+
 }

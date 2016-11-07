@@ -19,7 +19,7 @@ class GateWaySpec extends FlatSpec with BeforeAndAfter with BeforeAndAfterAll {
     gw.delete(key2)
   }
 
-  val gw = new GateWay[String](dbPath)
+  val gw = GateWay[String](dbPath)
 
   val (key1, value1) = ((1, 1, 1), "SampleValue1")
   val (key2, value2) = ((1, 1, 2), "SampleValue2")
