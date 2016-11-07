@@ -3,6 +3,7 @@ package com.bwsw.rocksDBPoC
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.nio.ByteBuffer
 import org.rocksdb.{Options, RocksDB}
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Wraps "low"-level RocksDB-access Java interface to more Scala-like DAO.
@@ -14,6 +15,7 @@ class GateWay[T <: java.io.Serializable](path: String) {
   GateWay //See companion object for explanations
 
   type Key = (Int, Int, Int)
+  type Prefix = (Int, Int)
 
   /*
   Used for putting values in DB
@@ -35,7 +37,7 @@ class GateWay[T <: java.io.Serializable](path: String) {
     ois.close()
     result.asInstanceOf[T]
   }
-
+//
   private def normalize(bytes: Array[Byte]): Array[Byte] = bytes match {
     case Array(a) => Array[Byte](0, 0, 0, a)
     case Array(a, b) => Array[Byte](0, 0, a, b)
@@ -49,6 +51,11 @@ class GateWay[T <: java.io.Serializable](path: String) {
     normalize(BigInt(key._3).toByteArray)
   ).flatten
 
+  private def prefixToBytes(prefix: Prefix) : Array[Byte] = Array(
+    normalize(BigInt(prefix._1).toByteArray),
+    normalize(BigInt(prefix._2).toByteArray)
+  ).flatten
+
   private def bytesToKey(bytes: Array[Byte]): Key =
     (ByteBuffer.wrap(bytes.take(4)).getInt,
       ByteBuffer.wrap(bytes.slice(4, 8)).getInt,
@@ -56,6 +63,7 @@ class GateWay[T <: java.io.Serializable](path: String) {
 
   val options = new Options()
     .setCreateIfMissing(true)
+    .useFixedLengthPrefixExtractor(8)
 
   val db = RocksDB.open(options, path)
 
@@ -64,6 +72,23 @@ class GateWay[T <: java.io.Serializable](path: String) {
     * @return Some(T) if OK, None if value was not found
     */
   def get(key: Key): Option[T] = Option(db.get(keyToBytes(key))).map(deserialize)
+
+  /**
+    * Get all values from DB which correspond to key prefix
+    * @param prefix Is an Int-pair prefix
+    * @return Sequence of all appropriate key/value pairs
+    */
+  def getAll(prefix: Prefix): Seq[(Key, T)] = {
+    val iter = db.newIterator()
+    val results: ArrayBuffer[(Key, T)] = ArrayBuffer()
+    val criteria = prefixToBytes(prefix)
+    iter.seek(criteria)
+    while (iter.isValid && iter.key.startsWith(criteria)) {
+      results += ((bytesToKey(iter.key), deserialize(iter.value)))
+      iter.next()
+    }
+    results
+  }
 
   /**
     * Create or update value by key
